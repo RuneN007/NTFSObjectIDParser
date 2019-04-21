@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setHorizontalHeaderItem(12, new QStandardItem(QString("Clock Sequence")) );
     ui->tableViewResults->setModel(model);
     rowcounter=0;
+    lastMFTRecord=0;
+    bgcolor = new QBrush(Qt::white);
     lastPath = QDir::homePath();
     ui->chkUTC->setChecked(true);
     wantlocaltime = false;
@@ -109,7 +111,7 @@ void MainWindow::on_btnCsv_clicked()
     // Set headers first
     for(qint32 x= 0; x< columns; x++){
             textData += model->headerData(x,Qt::Horizontal).toString();
-            textData += ", ";      // for .csv file format
+            textData += "\t ";      // for .csv file format
     }
     textData += "\n";             // (optional: for new line segmentation)
 
@@ -118,7 +120,7 @@ void MainWindow::on_btnCsv_clicked()
 
 
             textData += model->data(model->index(i,j)).toString();
-            textData += ", ";      // for .csv file format
+            textData += "\t ";      // for .csv file format
         }
         textData += "\n";             // (optional: for new line segmentation)
     }

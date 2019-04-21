@@ -57,7 +57,7 @@ typedef struct _MFT_RECORD_HEADER
     qint16 Flags; // 0x00 = Deleted file, 0x01 = Allocated file, 0x02 Deleted Directory, 0x03 Allocated Directory
     qint32   AcctualSize;    // for this MFT Record
     qint32   AllocatedSpace; // for this MFT Record
-    quint64 BaseFileReference; // Points to the base NFT Record if it use multiple entries
+    quint64 BaseFileReference; // Points to the base MFT Record if it use multiple entries
     qint16 NextAttributeID; // Does not decrease if an attribute is deleted
     qint16 Reserved;
     quint32   MftRecordNumber;

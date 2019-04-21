@@ -75,7 +75,7 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
 		}
 
 		// Print the output to file
-        printf("\nAll values in the header are interpreted with the endian order of your computer\n\n");
+        // printf("\nAll values in the header are interpreted with the endian order of your computer\n\n");
 
         if(objidFileHeader.Signature != 0x00){
             printIndxHeader(&objidFileHeader);
@@ -111,7 +111,7 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
 
 		// Read and print all entries
 		
-        printf("\nAll object ID UUID values in the index entries are not interpreted using the endian ordering of your computer. They are shown using Big Endian\n\n");
+        // printf("\nAll object ID UUID values in the index entries are not interpreted using the endian ordering of your computer. They are shown using Big Endian\n\n");
 		while (pos < objidFileHeader.OffsetEndLastIndexEntry)
 		{
 			// copy the info from the memory buffer to the structure indxEntry
@@ -194,6 +194,8 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
     static OBJECT_IDENTIFIER_ATTRIBUTE_CONTENT oiaContent;
 
     quint64 pos = 0;
+
+
 	//rewind(mftfp);
     pos = get48bits(&objEntry->MFTRecord) * 0x400; // Make sure we start on the correct MFT Record
 
@@ -221,10 +223,10 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 
 	memcpy(&siaContent, &recBuffer[mftHeader->OffsetToStartAttribute + sizeof(MFT_ATTRIBUTE_HEADER)], sizeof(STANDARD_INFORMATION_ATTRIBUTE_CONTENT));
 	if (wantlocaltime){
-        printf(" -> MFT Record Standard Information Attribute (local time): \n");
+        // printf(" -> MFT Record Standard Information Attribute (local time): \n");
 	}
 	else{
-        printf(" -> MFT Record Standard Information Attribute (UTC): \n");
+        // printf(" -> MFT Record Standard Information Attribute (UTC): \n");
 	}
 
     QList<QStandardItem *> fieldSIAList;
@@ -259,8 +261,17 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
     QStandardItem *mftFlags = new QStandardItem(allocationStatus);
     fieldSIAList.append(mftFlags);
 
-    fieldSIAList.append(NULL);
-
+    if(siaContent.CreationDate == siaContent.LastModifiedDate == siaContent.LastAccessDate){
+        QStandardItem *siaEqualDates = new QStandardItem("Created, and content not changed");
+        fieldSIAList.append(siaEqualDates);
+    }else{
+        if(siaContent.CreationDate < siaContent.LastModifiedDate ){
+            QStandardItem *siaContentChanged = new QStandardItem("Content changed after creation");
+            fieldSIAList.append(siaContentChanged);
+        }else{
+            fieldSIAList.append(NULL);
+        }
+    }
 
     QStandardItem *aSiaName = new QStandardItem("" );
     fieldSIAList.append(aSiaName);
@@ -279,20 +290,25 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 
 
 
-    printf("  ----> SIA File Created: %s\n", returnDateAsString(siaContent.CreationDate, wantlocaltime));
-    printf("  ----> SIA File Modified: %s\n", returnDateAsString(siaContent.LastModifiedDate, wantlocaltime));
-    printf("  ----> SIA MFT Record Modified: %s\n", returnDateAsString(siaContent.MFTRecordModifiedDate, wantlocaltime));
-    printf("  ----> SIA File Accessed: %s\n", returnDateAsString(siaContent.LastAccessDate, wantlocaltime));
+    // printf("  ----> SIA File Created: %s\n", returnDateAsString(siaContent.CreationDate, wantlocaltime));
+    // printf("  ----> SIA File Modified: %s\n", returnDateAsString(siaContent.LastModifiedDate, wantlocaltime));
+    // printf("  ----> SIA MFT Record Modified: %s\n", returnDateAsString(siaContent.MFTRecordModifiedDate, wantlocaltime));
+    // printf("  ----> SIA File Accessed: %s\n", returnDateAsString(siaContent.LastAccessDate, wantlocaltime));
+
 
     model->insertRow(rowcounter++, fieldSIAList);
+    for(int i=0; i< model->columnCount(); i++){
+            model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+    }
+
 
 
 
 	if (wantlocaltime){
-        printf(" -> MFT Record File Name Attribute (local time): \n"); // We will find filenames
+        // printf(" -> MFT Record File Name Attribute (local time): \n"); // We will find filenames
 	}
 	else{
-        printf(" -> MFT Record File Name Attribute (UTC): \n"); // We will find filenames
+        // printf(" -> MFT Record File Name Attribute (UTC): \n"); // We will find filenames
 	}
 	
 
@@ -357,13 +373,15 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 
             // wprintf(L"  --> %s\n", fnaContent.Filename);
 
-            printf("  ----> FNA File Created: %s\n", returnDateAsString(fnaContent.CreationDate, wantlocaltime));
-            printf("  ----> FNA File Modified: %s\n", returnDateAsString(fnaContent.LastModifiedDate, wantlocaltime));
-            printf("  ----> FNA MFT Record Modified: %s\n", returnDateAsString(fnaContent.MFTRecordModifiedDate, wantlocaltime));
-            printf("  ----> FNA File Accessed: %s\n", returnDateAsString(fnaContent.LastAccessDate, wantlocaltime));
-
+            // printf("  ----> FNA File Created: %s\n", returnDateAsString(fnaContent.CreationDate, wantlocaltime));
+            // printf("  ----> FNA File Modified: %s\n", returnDateAsString(fnaContent.LastModifiedDate, wantlocaltime));
+            // printf("  ----> FNA MFT Record Modified: %s\n", returnDateAsString(fnaContent.MFTRecordModifiedDate, wantlocaltime));
+            // printf("  ----> FNA File Accessed: %s\n", returnDateAsString(fnaContent.LastAccessDate, wantlocaltime));
 
             model->insertRow(rowcounter++, fieldList);
+            for(int i=0; i< model->columnCount(); i++){
+                model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+            }
 			// delete memory allocation
 			free(fnaContent.Filename);
 			fnaContent.Filename = NULL;
@@ -418,8 +436,11 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
             QStandardItem *aOIASequence = new QStandardItem( QString::number( getObjIDSequence((char*)oiaContent.ObjectID) & 0xffff ) );
             fieldOIAList.append(aOIASequence);
 
-
             model->insertRow(rowcounter++, fieldOIAList);
+            for(int i=0; i< model->columnCount(); i++){
+                model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+            }
+
         }
 
 		if (attrHeader->AttributeLength == 0 || attrHeader->AttributeLength <0 || attrHeader->AttributeLength> 1024)
@@ -438,12 +459,12 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 
 void MainWindow::printMFTHeader(const MFT_RECORD_HEADER * header)
 {
-    printf("Checking the MFT Record header:\n");
-    printf(" -> Flags: %d (0 = Deleted file, 1= Allocated file, 2 = Deleted Dir, 3 = Allocated Dir)\n", header->Flags);
-    printf(" -> Sequence count: %d\n", header->SequenceCount);
-    printf(" -> Hard link count: %d (number of FNA entries)\n", header->HardlinkCount);
-    printf(" -> Record number: %d\n", header->MftRecordNumber);
-    printf(" -> Offset to start attribute %d\n", header->OffsetToStartAttribute);
+    // printf("Checking the MFT Record header:\n");
+    // printf(" -> Flags: %d (0 = Deleted file, 1= Allocated file, 2 = Deleted Dir, 3 = Allocated Dir)\n", header->Flags);
+    // printf(" -> Sequence count: %d\n", header->SequenceCount);
+    // printf(" -> Hard link count: %d (number of FNA entries)\n", header->HardlinkCount);
+    // printf(" -> Record number: %d\n", header->MftRecordNumber);
+    // printf(" -> Offset to start attribute %d\n", header->OffsetToStartAttribute);
 
 }
 
@@ -452,20 +473,20 @@ void MainWindow::printIndxHeader(const INDX_FILE_HEADER * header)
 	
     for (qint32 i = 0; i < 4; i++)
 	{
-        printf("%x", header->Signature);
+        // printf("%x", header->Signature);
 	}
-    printf("\n");
-    printf("Offset to Update Sequence Array: %d\n", header->OffsetUpdateSequenceArray);
-    printf("Entries in Update Sequence Array: %d\n", header->EntriesUpdateSequenceArray);
-    printf("Logfile Sequence Number: %llu\n", header->LogfileSequenceNumber);
-    printf("Virtual Cluster Number: %llu\n", header->VCN);
-    printf("Offset to Index Header: %d, add 24 to get the offet in file\n", header->OffsetIndexEntryHeader);
-    printf("Offset to End of Last Index Entry: %d, add 24 to get the offet in file\n", header->OffsetEndLastIndexEntry);
-    printf("Index type flag: %d\n", header->IndexTypeFlag);
-    printf("Update Sequence Number: %04x\n", header->UpdateSequenceArray[0]);
+    // printf("\n");
+    // printf("Offset to Update Sequence Array: %d\n", header->OffsetUpdateSequenceArray);
+    // printf("Entries in Update Sequence Array: %d\n", header->EntriesUpdateSequenceArray);
+    // printf("Logfile Sequence Number: %llu\n", header->LogfileSequenceNumber);
+    // printf("Virtual Cluster Number: %llu\n", header->VCN);
+    // printf("Offset to Index Header: %d, add 24 to get the offet in file\n", header->OffsetIndexEntryHeader);
+    // printf("Offset to End of Last Index Entry: %d, add 24 to get the offet in file\n", header->OffsetEndLastIndexEntry);
+    // printf("Index type flag: %d\n", header->IndexTypeFlag);
+    // printf("Update Sequence Number: %04x\n", header->UpdateSequenceArray[0]);
 	for (int i = 1; i<header->EntriesUpdateSequenceArray; i++)
 	{
-        printf("Sector %d Sequence Array[%d]: %04x\n", i - 1, i, header->UpdateSequenceArray[i]);
+        // printf("Sector %d Sequence Array[%d]: %04x\n", i - 1, i, header->UpdateSequenceArray[i]);
 	}
 
 }
@@ -491,7 +512,14 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     fieldObjList.append(objFlags);
 
 
-    fieldObjList.append(NULL);
+    // Only $Volume should have this
+    if(!isNullGUID((char*)entry->ObjectID ) && ( get48bits(&entry->MFTRecord) == 3)){
+        QStandardItem *uniqeVolID= new QStandardItem( "GUID for volume" );
+        fieldObjList.append(uniqeVolID);
+    }else{
+        fieldObjList.append(NULL);
+    }
+
 
     QByteArray objN((char*)entry->ObjectID, 16);
     QStandardItem *aObjName = new QStandardItem( QString(objN.toHex()));
@@ -521,8 +549,22 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
 
     QStandardItem *aObjSequence = new QStandardItem( QString::number( getObjIDSequence((char*)entry->ObjectID) & 0xffff ) );
     fieldObjList.append(aObjSequence);
-
     model->insertRow(rowcounter++, fieldObjList);
+    for(int i=0; i< model->columnCount(); i++){
+
+
+            if(lastMFTRecord != get48bits(&entry->MFTRecord) ){
+                lastMFTRecord = get48bits(&entry->MFTRecord); // Update the last mft record before next iteration
+                if(*bgcolor == QBrush(Qt::white)){
+                    bgcolor->setColor(Qt::lightGray);
+                }else{
+                    bgcolor->setColor(Qt::white);
+                }
+
+            }
+            model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+    }
+
 
 
 
@@ -550,17 +592,30 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
         if( !isEqualGUID( (char*)entry->BirthObjectID, (char*)entry->ObjectID) ){
             if(!isNullGUID((char*)entry->BirthObjectID) || !isNullGUID((char*)entry->ObjectID )){
                 if(get48bits(&entry->MFTRecord) != 3){
-                   QStandardItem *aMovedToVol= new QStandardItem( "Copied to volume" );
-                   fieldObjVolList.append(aMovedToVol);
+                    if(!isNullGUID((char*)entry->BirthVolumeID )){
+                        QStandardItem *aMovedToVol= new QStandardItem( "Copied to volume" );
+                        fieldObjVolList.append(aMovedToVol);
+                    }else{ // BirthVolumeID is zero
+                        if(isNullGUID((char*)entry->BirthObjectID)){
+                            QStandardItem *aMovedToVol= new QStandardItem( "Created before Object ID was assigned to $Volume" );
+                            fieldObjVolList.append(aMovedToVol);
+
+                        }else{ // BirthObjectID is not zero
+                            QStandardItem *aMovedToVol= new QStandardItem( "Created directly after format (not rebooted while attached), or USB thumb drive!" );
+                            fieldObjVolList.append(aMovedToVol);
+                        }
+                    }
+
                 }else{
-                   fieldObjVolList.append(NULL);
+                        fieldObjVolList.append(NULL);
                 }
             } else{
-                fieldObjVolList.append(NULL);
+                    fieldObjVolList.append(NULL);
+
             }
         }else{
             if(isNullGUID((char*) entry->BirthVolumeID)){
-                QStandardItem *aMovedToVol= new QStandardItem( "External USB device?" );
+                QStandardItem *aMovedToVol= new QStandardItem( "BirthVolumeID is not set!" );
                 fieldObjVolList.append(aMovedToVol);
             }else{
                 fieldObjVolList.append(NULL);
@@ -579,10 +634,12 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     fieldObjVolList.append(NULL);
     fieldObjVolList.append(NULL);
 
-
-
-
     model->insertRow(rowcounter++, fieldObjVolList);
+    for(int i=0; i< model->columnCount(); i++){
+            model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+    }
+
+
 
 
     QList<QStandardItem *> fieldObjBirthList;
@@ -633,6 +690,10 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     fieldObjBirthList.append(aObjBirthSequence);
 
     model->insertRow(rowcounter++, fieldObjBirthList);
+    for(int i=0; i< model->columnCount(); i++){
+        model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+    }
+
 
 
 
@@ -669,67 +730,71 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     fieldObjDomainList.append(NULL);
 
     model->insertRow(rowcounter++, fieldObjDomainList);
+    for(int i=0; i< model->columnCount(); i++){
+        model->setData(model->index(rowcounter-1,i), *bgcolor, Qt::BackgroundRole);
+    }
 
 
 
-    printf("\nAt file offset %llu the following Index Entry was found:", (page*0x1000 )+ pos);
 
-    printf("\nObject ID (Big Endian): ");
+    // printf("\nAt file offset %llu the following Index Entry was found:", (page*0x1000 )+ pos);
+
+    // printf("\nObject ID (Big Endian): ");
     for (qint32 i = 0; i < 16; i++)
 	{
-        printf("%02x", entry->ObjectID[i] & 0xff);
+        // printf("%02x", entry->ObjectID[i] & 0xff);
 	}
 
 	if (wantlocaltime){
-        printf("\nObject ID Date (localtime): %s", returnDateAsString(getObjIDDateNumber((char*)entry->ObjectID), wantlocaltime));
+        // printf("\nObject ID Date (localtime): %s", returnDateAsString(getObjIDDateNumber((char*)entry->ObjectID), wantlocaltime));
 	}
 	else{
-        printf("\nObject ID Date (UTC): %s", returnDateAsString(getObjIDDateNumber((char*)entry->ObjectID), wantlocaltime));
+        // printf("\nObject ID Date (UTC): %s", returnDateAsString(getObjIDDateNumber((char*)entry->ObjectID), wantlocaltime));
 	}
 
 	
-    printf("\nObject ID Clock Sequence: %04x", getObjIDSequence((char*)entry->ObjectID) & 0xffff );
+    // printf("\nObject ID Clock Sequence: %04x", getObjIDSequence((char*)entry->ObjectID) & 0xffff );
     printObjIDMac((char*)entry->ObjectID);
 	
-    printf("\nMFT Record: %llu (LE)", get48bits(&entry->MFTRecord));
-    printf("\nMFT Record sequence count: %d (LE)", getMftRecordSequenceNumber(&entry->MFTRecord));
+    // printf("\nMFT Record: %llu (LE)", get48bits(&entry->MFTRecord));
+    // printf("\nMFT Record sequence count: %d (LE)", getMftRecordSequenceNumber(&entry->MFTRecord));
 	
 	/* Must be implemented later
-    printf("\nMFT Record Sequence : ");
+    // printf("\nMFT Record Sequence : ");
 	for (int i = 6; i < 8; i++) // The MFT Record is the first 6 bytes
 	{
-        printf("%02x", entry->MFTRecord[i] & 0xff);
+        // printf("%02x", entry->MFTRecord[i] & 0xff);
 	}
 	*/
 
-    printf("\nBirth Volume ID (Big Endian): ");
+    // printf("\nBirth Volume ID (Big Endian): ");
     for (qint32 i = 0; i < 16; i++)
 	{
-        printf("%02x", entry->BirthVolumeID[i] & 0xff);
+        // printf("%02x", entry->BirthVolumeID[i] & 0xff);
 	}
-    printf("\nBirth Object ID (Big Endian): ");
+    // printf("\nBirth Object ID (Big Endian): ");
     for (qint32 i = 0; i < 16; i++)
 	{
-        printf("%02x", entry->BirthObjectID[i] & 0xff);
+        // printf("%02x", entry->BirthObjectID[i] & 0xff);
 	}
 	if (wantlocaltime){
-        printf("\nBirth Object ID Date (local time): %s", returnDateAsString(getObjIDDateNumber((char*)entry->BirthObjectID),wantlocaltime));
+        // printf("\nBirth Object ID Date (local time): %s", returnDateAsString(getObjIDDateNumber((char*)entry->BirthObjectID),wantlocaltime));
 	}
 	else{
-        printf("\nBirth Object ID Date (UTC): %s", returnDateAsString(getObjIDDateNumber((char*)entry->BirthObjectID), wantlocaltime));
+        // printf("\nBirth Object ID Date (UTC): %s", returnDateAsString(getObjIDDateNumber((char*)entry->BirthObjectID), wantlocaltime));
 	}
 
 		
-    printf("\nBirth Object ID Clock Sequence: %04x (LE)", getObjIDSequence((char*)entry->BirthObjectID) & 0xffff );
+    // printf("\nBirth Object ID Clock Sequence: %04x (LE)", getObjIDSequence((char*)entry->BirthObjectID) & 0xffff );
 	
     printObjIDMac((char*)entry->BirthObjectID);
 
-    printf("\nDomain ID (Big Endian): ");
+    // printf("\nDomain ID (Big Endian): ");
     for (qint32 i = 0; i < 16; i++)
 	{
-        printf("%02x", entry->DomainID[i] & 0xff);
+        // printf("%02x", entry->DomainID[i] & 0xff);
 	}
-    printf("\n");
+    // printf("\n");
 
 }
 
@@ -801,6 +866,8 @@ quint64 MainWindow::getObjIDDateNumber(const char * buffer)
 {
     quint64 wintime;
 
+
+
 	// first we just copy the first 8 bytes from the buffer. Object ID buffers are 16 bytes
 	memcpy(&wintime, buffer, 8);
 
@@ -816,7 +883,11 @@ quint64 MainWindow::getObjIDDateNumber(const char * buffer)
         wintime &= ~(1ULL << i);
 	}
 	// then we subtract the number of nano seconds intervals between the ObjID epoch and the FILETIME
-	wintime -= 0x146BF33E42C000;
+
+    if(wintime >= 0x146BF33E42C000)
+        wintime -= 0x146BF33E42C000;
+
+
 
 	return wintime;
 
@@ -828,6 +899,9 @@ const char * MainWindow::returnDateAsString(const quint64 aDate, bool localtime)
 {
 
     qint32 len = 0;
+
+    if(aDate == 0)
+        return "N/A";
 
 	char * timewithoutendl = (char*)malloc(sizeof(char)*26);
 	struct tm timeinfo;
@@ -876,7 +950,7 @@ QString MainWindow::printObjIDMac(const char * buffer)
 {
     QString macaddr, tempHex;
 	// Buffer is 16 bytes
-    printf("\nMAC address: ");
+    // printf("\nMAC address: ");
     if(buffer[10] & (1 << 0)){ // Is bit 0 set in octet 10?
         return "Not valid MAC!";
     }
@@ -892,25 +966,26 @@ QString MainWindow::printObjIDMac(const char * buffer)
 
         tempHex = ""; // Set it back
 
-        printf("%02x", buffer[i] & 0xff);
+        // printf("%02x", buffer[i] & 0xff);
         if (i< 15){
             macaddr += '-';
-            printf("-");
+            // printf("-");
         } // if
 	} // for
     return macaddr;
 }
 
-short MainWindow::getObjIDSequence(const char * buffer)
+quint16 MainWindow::getObjIDSequence(const char * buffer)
 {
-    qint16 sequence;
-    qint16 number = 1;
+    quint16 sequence;
+    quint16 number = 1;
 
 	// first we just copy byte 8 and 9 from the buffer. Object ID buffers are 16 bytes
-    memcpy(&sequence, &buffer[8], sizeof(qint16));
+    memcpy(&sequence, &buffer[8], sizeof(quint16));
 
     // Then we must clear the the two most significant bits in the first byte (the Version). However the system will interpret this multibyte
     // as little endian.
+
 
     for (qint32 i = 6; i < 8; i++)
 	{
@@ -921,17 +996,17 @@ short MainWindow::getObjIDSequence(const char * buffer)
 		// be cleared. If it is not set, it will stay cleared.
 		sequence &= ~(number << i);
 	}
-	
-	return sequence;
+    // return sequence;
+    return((sequence << 8) | (sequence >> 8)); // Swap bytes. Must be Big Endian!
 
 }
 
-short MainWindow::getOrder(const char * buffer)
+qint16 MainWindow::getOrder(const char * buffer)
 {
     qint16 order;
 
     // first we just copy byte 0 and 1 from the buffer. Object ID buffers are 16 bytes
-    memcpy(&order, &buffer[0], sizeof(qint16)); // short should always be two bytes... I hope :-)
+    memcpy(&order, &buffer[0], sizeof(qint16)); // short should always be two bytes...
 
 
     return order;

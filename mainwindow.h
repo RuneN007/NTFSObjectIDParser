@@ -11,6 +11,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QtEndian>
+#include <QBrush>
 
 #include "structures.h"
 
@@ -39,7 +40,7 @@ public:
     const char * returnDateAsString(const quint64 aDate, bool localtime);
     quint64 getObjIDDateNumber(const char * buffer);
     QString printObjIDMac(const char * buffer);
-    qint16 getObjIDSequence(const char * buffer);
+    quint16 getObjIDSequence(const char * buffer);
     bool is_bit_set(unsigned value, unsigned bitindex);
     QString printFullPath(quint32 MftRecordNumber, QByteArray * MFTData, QString FullPath);
     qint16 getOrder(const char * buffer);
@@ -64,6 +65,8 @@ private:
     Ui::MainWindow *ui;
     QStandardItemModel *model;
     qint32 rowcounter;
+    quint32 lastMFTRecord;
+    QBrush * bgcolor;
     QString lastPath;
 
     bool wantlocaltime; // Set UTC or localtime
