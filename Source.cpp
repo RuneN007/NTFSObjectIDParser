@@ -169,7 +169,10 @@ QString MainWindow::printFullPath(quint32 MftRecordNumber, QByteArray * MFTData,
     fnaContent.Filename = (wchar_t *)malloc((fnaContent.LengthOfFilename + 1)  * sizeof(wchar_t));
 
     // After the stream name which is empty, the filename starts
-    memcpy(fnaContent.Filename, MFTData->data() + pos + mftpos  + 0x5A, (fnaContent.LengthOfFilename + 1) * sizeof(wchar_t));
+    memcpy(fnaContent.Filename, MFTData->data() + pos + mftpos  + 0x5A, (fnaContent.LengthOfFilename) * sizeof(wchar_t));
+
+    // Make sure the Filename ends with the 0 terminator
+    fnaContent.Filename[fnaContent.LengthOfFilename] = (wchar_t)'\0';
 
     if(mftHeader.MftRecordNumber != 5){
        // Recursive
@@ -189,12 +192,18 @@ QString MainWindow::printFullPath(quint32 MftRecordNumber, QByteArray * MFTData,
 void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData, MFT_RECORD_HEADER * mftHeader, MFT_ATTRIBUTE_HEADER * attrHeader)
 {
 	//clearerr(mftfp); // In case of a previous error
-	static FILE_NAME_ATTRIBUTE_CONTENT fnaContent;
+    static FILE_NAME_ATTRIBUTE_CONTENT fnaContent;
 	static STANDARD_INFORMATION_ATTRIBUTE_CONTENT siaContent;
     static OBJECT_IDENTIFIER_ATTRIBUTE_CONTENT oiaContent;
 
     quint64 pos = 0;
 
+    if( ui->chkUTC->isChecked() ){
+        wantlocaltime = false;
+    }else
+    {
+        wantlocaltime = true;
+    }
 
 	//rewind(mftfp);
     pos = get48bits(&objEntry->MFTRecord) * 0x400; // Make sure we start on the correct MFT Record
@@ -321,16 +330,16 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 		if (attrHeader->AttributeType == 0x30 && attrHeader->AttributeLength > 0)
 		{
 			
-			memcpy(&fnaContent, &recBuffer[mftpos + attrHeader->OffsetToResidentData], sizeof(_FILE_NAME_ATTRIBUTE_CONTENT));
+            memcpy(&fnaContent, &recBuffer[mftpos + attrHeader->OffsetToResidentData], sizeof(FILE_NAME_ATTRIBUTE_CONTENT));
 
 			// We are still missing the filename, and we need to allocate space for it
 			fnaContent.Filename = (wchar_t *)malloc((fnaContent.LengthOfFilename + 1)  * sizeof(wchar_t));
 
 			// After the stream name which is empty, the filename starts
-			memcpy(fnaContent.Filename, &recBuffer[mftpos + 0x5A], (fnaContent.LengthOfFilename + 1) * sizeof(wchar_t));
+            memcpy(fnaContent.Filename, &recBuffer[mftpos + 0x5A], (fnaContent.LengthOfFilename) * sizeof(wchar_t));
 
 			// Set a nullterminator, which is not there by standard
-            // fnaContent.Filename[fnaContent.LengthOfFilename] = (wchar_t)'\0'; // This is why we allocated one more byte above
+            fnaContent.Filename[fnaContent.LengthOfFilename] = (wchar_t)'\0'; // This is why we allocated one more byte above
 			
 			// We need to use wide print function because the filename is in wide characters (Unicode)
 
@@ -494,6 +503,12 @@ void MainWindow::printIndxHeader(const INDX_FILE_HEADER * header)
 void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 page)
 {
 
+    if( ui->chkUTC->isChecked() ){
+        wantlocaltime = false;
+    }else
+    {
+        wantlocaltime = true;
+    }
 
     QList<QStandardItem *> fieldObjList;
 
@@ -889,7 +904,7 @@ quint64 MainWindow::getObjIDDateNumber(const char * buffer)
 
 
 
-	return wintime;
+    return wintime; // Time is in UTC
 
 
 }
@@ -912,14 +927,27 @@ const char * MainWindow::returnDateAsString(const quint64 aDate, bool localtime)
         gmtime_s(&timeinfo,&timestamp);
     else
         localtime_s(&timeinfo,&timestamp);
+
+    strftime(timewithoutendl, "%F %T", &timeinfo);
 #else
     if(!localtime)
         gmtime_r(&timestamp, &timeinfo);
     else
        localtime_r(&timestamp, &timeinfo);
+
+    // timewithoutendl = asctime(&timeinfo);
+    sprintf(timewithoutendl, "%d-%.2d-%.2d %.2d:%.2d:%.2d\n",
+            timeinfo.tm_year +1900,
+            timeinfo.tm_mon,
+            timeinfo.tm_mday,
+            timeinfo.tm_hour,
+            timeinfo.tm_min,
+            timeinfo.tm_sec);
 #endif
 
-    timewithoutendl = asctime(&timeinfo);
+
+
+
 
 	if (timewithoutendl != NULL){
         len = (qint32)strlen(timewithoutendl);

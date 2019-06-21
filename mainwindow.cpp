@@ -62,6 +62,8 @@ void MainWindow::on_btnRun_clicked()
         parseObjID(ui->lblObjID->text(), ui->lblMFT->text());
         ui->btnCsv->setEnabled(true);
     }
+
+
 }
 
 bool MainWindow::is_bit_set(unsigned value, unsigned bitindex)
@@ -130,7 +132,11 @@ void MainWindow::on_btnCsv_clicked()
     QDir theDir(ui->lblObjID->text());
     theDir.cdUp();
     QString csvpath(theDir.absolutePath() );
-    csvpath = csvpath + QDir::separator() + "ObjectID-" + QDateTime::currentDateTime().toString() + ".csv";
+    csvpath = csvpath + QDir::separator() + "ObjectID-" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss") + ".csv";
+
+    csvpath = QFileDialog::getSaveFileName(this,
+        tr("Save CSV file to"), csvpath, tr("Comma Separated file (*.csv)"));
+
     QFile csvFile(csvpath);
     if(csvFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 
@@ -138,6 +144,12 @@ void MainWindow::on_btnCsv_clicked()
         out << textData;
 
         csvFile.close();
+    }else{
+        QMessageBox msg;
+        msg.setText("CSV file: " + csvpath + "not saved!");
+        msg.exec();
+        ui->btnCsv->setDisabled(false);
+        return;
     }
 
     QMessageBox msg;

@@ -98,7 +98,7 @@ typedef struct _FILE_NAME_ATTRIBUTE_CONTENT
     quint64 ActualSize; // Used size
     qint32 FileTypeFlags;
     qint32 ReparseValue;
-    qint8 LengthOfFilename; // In Unicode elements
+    quint8 LengthOfFilename; // In Unicode elements
     qint8 FilenameType; // 0x00 = Posix, 0x01=Win32, 0x02 DOS Short name, 0x03=Win32/DOS
 	wchar_t * Filename; // Memory must be allocated
 }FILE_NAME_ATTRIBUTE_CONTENT;
