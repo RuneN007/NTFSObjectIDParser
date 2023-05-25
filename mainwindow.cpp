@@ -12,7 +12,8 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setHorizontalHeaderItem(0, new QStandardItem(QString("MFT Record")) );
     model->setHorizontalHeaderItem(1, new QStandardItem(QString("Byte Offset")) );
     model->setHorizontalHeaderItem(2, new QStandardItem(QString("Attribute or Type")) );
-    model->setHorizontalHeaderItem(3, new QStandardItem(QString("MFT Header Flags")) );
+    model->setHorizontalHeaderItem(3, new QStandardItem(QString("Flags")) );
+    ui->tableViewResults->setProperty("toolTip", "The Flags are from the MFT header for MFT records, or from the Flags field in the Object ID entries");
     model->setHorizontalHeaderItem(4, new QStandardItem(QString("Volume Action")) );
     model->setHorizontalHeaderItem(5, new QStandardItem(QString("Name")) );
     model->setHorizontalHeaderItem(6, new QStandardItem(QString("Created")) );
@@ -23,12 +24,15 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setHorizontalHeaderItem(11, new QStandardItem(QString("ObjectID Order")) );
     model->setHorizontalHeaderItem(12, new QStandardItem(QString("Clock Sequence")) );
     ui->tableViewResults->setModel(model);
+    // ui->tableViewResults->hide();
     rowcounter=0;
     lastMFTRecord=0;
     bgcolor = new QBrush(Qt::white);
     lastPath = QDir::homePath();
     ui->chkUTC->setChecked(true);
     wantlocaltime = false;
+    ui->progressBar->hide();
+    ui->btnClearAll->setDisabled(true);
 }
 
 MainWindow::~MainWindow()
@@ -43,6 +47,7 @@ void MainWindow::on_btnObjId_clicked()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Select ObjID $O file"), lastPath, tr("ObjID $O (*.* *)"));
     ui->lblObjID->setText( fileName );
     lastPath = QFileInfo(fileName).path();
+    ui->btnRun->setEnabled(true);
 }
 
 void MainWindow::on_btnMFT_clicked()
@@ -50,17 +55,22 @@ void MainWindow::on_btnMFT_clicked()
      QString fileName = QFileDialog::getOpenFileName(this, tr("Select MFT file"), lastPath, tr("MFT (*.* *)"));
     ui->lblMFT->setText( fileName );
     lastPath = QFileInfo(fileName).path();
+    ui->btnRun->setEnabled(true);
 }
 
 void MainWindow::on_btnRun_clicked()
 {
     if(ui->lblObjID->text() != "" && ui->lblMFT->text() != ""){
+        ui->btnCsv->setDisabled(true);
+        ui->btnClearAll->setDisabled(true);
         ui->chkUTC->setDisabled(true);
         ui->btnMFT->setDisabled(true);
         ui->btnObjId->setDisabled(true);
         ui->btnRun->setDisabled(true);
         parseObjID(ui->lblObjID->text(), ui->lblMFT->text());
+        ui->tableViewResults->show();
         ui->btnCsv->setEnabled(true);
+        ui->btnClearAll->setEnabled(true);
     }
 
 
@@ -76,10 +86,6 @@ void MainWindow::on_btnExit_clicked()
     QApplication::quit();
 }
 
-void MainWindow::on_chkUTC_stateChanged(qint64 arg1)
-{
-    wantlocaltime = !arg1; // If the UTC check box is checked. Then Not wantlocaltime
-}
 
 bool MainWindow::isNullGUID(const char * buffer, quint32 length)
 {
@@ -157,4 +163,47 @@ void MainWindow::on_btnCsv_clicked()
     msg.exec();
     ui->btnCsv->setDisabled(true);
 
+}
+
+void MainWindow::on_chkUTC_stateChanged(int arg1)
+{
+    wantlocaltime = !arg1; // If the UTC check box is checked. Then Not wantlocaltime
+}
+
+void MainWindow::on_btnClearAll_clicked()
+{
+    model->removeRows(0, model->rowCount() );
+    // ui->tableViewResults->hide();
+    ui->progressBar->hide();
+    ui->chkUTC->setEnabled(true);
+    ui->btnMFT->setEnabled(true);
+    ui->btnObjId->setEnabled(true);
+    ui->btnRun->setDisabled(true);
+    ui->lblObjID->setText("");
+    ui->lblMFT->setText("");
+    ui->btnCsv->setDisabled(true);
+    ui->btnClearAll->setDisabled(true);
+    // Private members that need to be initialised
+    rowcounter=0;
+    lastMFTRecord=0;
+    bgcolor = new QBrush(Qt::white);
+}
+
+QString MainWindow::getObjFlags(const quint16 flag)
+{
+    switch(flag)
+    {
+        case 0:
+            return "Leaf node";
+            break;
+        case 1:
+            return "Child node exists";
+            break;
+        case 2:
+            return "Last entry in node list";
+            break;
+        default:
+            return "Unknown value";
+            break;
+    }
 }

@@ -42,7 +42,7 @@ typedef struct _INDX_ENTRY
     qint8 BirthVolumeID[16];
     qint8 BirthObjectID[16];
     qint8 DomainID[16];
-} INDX_ENTRY;   // Total of 64 or 0x40 bytes
+} INDX_ENTRY;   // Total of 88 or 0x58 bytes
 
 
 typedef struct _MFT_RECORD_HEADER

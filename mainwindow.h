@@ -37,12 +37,13 @@ public:
     void printMFTHeader(const MFT_RECORD_HEADER * header);
     void printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData, MFT_RECORD_HEADER * mftHeader, MFT_ATTRIBUTE_HEADER * attrHeader);
     quint64 FileTime2Unixepoch(const quint64 ft);
-    const char * returnDateAsString(const quint64 aDate, bool localtime);
+    QString returnDateAsString(const quint64 aDate, bool localtime);
     quint64 getObjIDDateNumber(const char * buffer);
     QString printObjIDMac(const char * buffer);
     quint16 getObjIDSequence(const char * buffer);
     bool is_bit_set(unsigned value, unsigned bitindex);
     QString printFullPath(quint32 MftRecordNumber, QByteArray * MFTData, QString FullPath);
+    QString getObjFlags(const quint16 flag);
     qint16 getOrder(const char * buffer);
     bool isNullGUID(const char * buffer, quint32 length=16);
     bool isEqualGUID(const char * buffer1, const char * buffer2, quint32 length=16);
@@ -57,9 +58,11 @@ private slots:
 
     void on_btnExit_clicked();
 
-    void on_chkUTC_stateChanged(qint64 arg1);
-
     void on_btnCsv_clicked();
+
+    void on_chkUTC_stateChanged(int arg1);
+
+    void on_btnClearAll_clicked();
 
 private:
     Ui::MainWindow *ui;

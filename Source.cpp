@@ -27,6 +27,7 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
         return -1; // Not opened
     }
     QByteArray ObjIDData = ObjFile.readAll();
+    QDataStream ObjIDDataStream(ObjIDData);
 
     if(!MFTFile.open(QIODevice::ReadOnly)){
         return -1; // Not opened
@@ -44,19 +45,30 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
 	MFT_RECORD_HEADER mftHeader;
 	MFT_ATTRIBUTE_HEADER attrHeader;
 
+    // Set progressbar
+    qint64 maxSize = ObjIDData.size();
+    ui->progressBar->setMaximum(maxSize);
+    ui->progressBar->show();
+
+
 	// For now we only support one Indx size of 4096 bytes
 	char outIndx[0x1000];
 	// Set posistion in file
     qint32 pos = 0;
     quint32 indxNumber = 0; // We start on Index page 0, each page is 4096 bytes
 
-    while (pos < ObjIDData.size())
+    while (pos < maxSize)
 	{
 
         // Make sure we start on correct Indx
         pos = indxNumber*0x1000L; // Make sure we start on correct index page
 
-        if ( ( pos + 0x40) > ObjIDData.size() ){ // Should only be true at eof
+        ui->progressBar->setValue(pos);
+        ui->progressBar->hide();
+        ui->progressBar->show();
+        QApplication::processEvents(); // Make sure the progressbar work/updates
+
+        if ( ( pos + 0x40) > maxSize ){ // Should only be true at eof
             pos +=40; // Which will quit the while loop
             continue;
         }
@@ -83,7 +95,7 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
             // Change file pointer position to start of index page
             pos = indxNumber*0x1000L; // Make sure we start on correct index page
 
-            if ( (pos + 0x1000) > ObjIDData.size() ){
+            if ( (pos + 0x1000) > maxSize ){
                 pos +=0x1000; // Not a complete block left, so we make sure we go out of the while loop
                 continue;
             }
@@ -92,9 +104,16 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
         // copy the info from the memory buffer to the structure ObjectId File Header
 
         if(objidFileHeader.Signature == 0x00){
-            memcpy(&outIndx, ObjIDData.data(), ObjIDData.size());
-            pos += objidRootHeader.OffsetIndexEntryHeader + 0x10;
-            objidFileHeader.OffsetEndLastIndexEntry = objidRootHeader.OffsetEndLastIndexEntry;
+            // We have two use cases; a cluster without any indexes or an Index Root Attribute
+            if(objidRootHeader.Sorting == 0x13){
+                memcpy(&outIndx, ObjIDData.data(), ObjIDData.size()); // will never be larger than 0x1000
+                // QuickFix; We are parsing the objidFileHeader in the while loop below, but this is from the IndexRoot attribute
+                objidFileHeader.OffsetEndLastIndexEntry = objidRootHeader.OffsetEndLastIndexEntry;
+                pos += objidRootHeader.OffsetIndexEntryHeader + 0x10;
+            } else{
+                pos = maxSize +1; // Not a valid block, so we make sure we go out of the while loop
+                continue;
+            }
         }else{
             memcpy(&outIndx, ObjIDData.data() + pos, 0x1000);
             // Fixup the Update Sequence Number found in the last two bytes of each sector
@@ -114,6 +133,11 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
         // printf("\nAll object ID UUID values in the index entries are not interpreted using the endian ordering of your computer. They are shown using Big Endian\n\n");
 		while (pos < objidFileHeader.OffsetEndLastIndexEntry)
 		{
+            // Double check that we have enough space for an entry
+            if ( ( pos + 0x58) > maxSize ){ // Should only be true at eof
+                pos +=58; // Which will quit the while loop
+                continue;
+            }
 			// copy the info from the memory buffer to the structure indxEntry
 			memcpy(&indxEntry, &outIndx[pos], sizeof(INDX_ENTRY));
 
@@ -131,7 +155,8 @@ qint32 MainWindow::parseObjID(QString ObjIDfileName, QString MFTFileName)
 	// Best practice is to close an open file handle. We are done reading from the file
     ObjFile.close();
     MFTFile.close();
-
+    ui->progressBar->setValue(maxSize);
+    ui->progressBar->show();
     return 0;
 
 } // main
@@ -144,6 +169,8 @@ QString MainWindow::printFullPath(quint32 MftRecordNumber, QByteArray * MFTData,
     pos = MftRecordNumber * 0x400; // Make sure we start on the correct MFT Record
     quint32 mftpos = 0;
 
+    if (MFTData->count() < pos )
+        return "";
     // copy the info from the memory buffer to the structure mftHeader
     memcpy(&mftHeader, MFTData->data() + pos, sizeof(MFT_RECORD_HEADER));
 
@@ -523,7 +550,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *Attrib = new QStandardItem("ObjectID");
     fieldObjList.append(Attrib);
 
-    QStandardItem *objFlags = new QStandardItem(QString::number(entry->Flags));
+    QStandardItem *objFlags = new QStandardItem(getObjFlags(entry->Flags));
     fieldObjList.append(objFlags);
 
 
@@ -594,7 +621,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *VolAttrib = new QStandardItem("BirthVolumeID");
     fieldObjVolList.append(VolAttrib);
 
-    QStandardItem *objVolFlags = new QStandardItem(QString::number(entry->Flags));
+    QStandardItem *objVolFlags = new QStandardItem(getObjFlags(entry->Flags));
     fieldObjVolList.append(objVolFlags);
 
 
@@ -669,7 +696,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *BirthAttrib = new QStandardItem("BirthObjectID");
     fieldObjBirthList.append(BirthAttrib);
 
-    QStandardItem *objBirthFlags = new QStandardItem(QString::number(entry->Flags));
+    QStandardItem *objBirthFlags = new QStandardItem(getObjFlags(entry->Flags));
     fieldObjBirthList.append(objBirthFlags);
 
     fieldObjBirthList.append(NULL);
@@ -724,7 +751,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *DomainAttrib = new QStandardItem("DomainObjectID");
     fieldObjDomainList.append(DomainAttrib);
 
-    QStandardItem *objDomainFlags = new QStandardItem(QString::number(entry->Flags));
+    QStandardItem *objDomainFlags = new QStandardItem(getObjFlags(entry->Flags));
     fieldObjDomainList.append(objDomainFlags);
 
     fieldObjDomainList.append(NULL);
@@ -909,53 +936,24 @@ quint64 MainWindow::getObjIDDateNumber(const char * buffer)
 
 }
 
-
-const char * MainWindow::returnDateAsString(const quint64 aDate, bool localtime)
+QString MainWindow::returnDateAsString(const quint64 aDate, bool localtime)
 {
 
-    qint32 len = 0;
+    QDateTime timestamp;
+
 
     if(aDate == 0)
         return "N/A";
 
-	char * timewithoutendl = (char*)malloc(sizeof(char)*26);
-	struct tm timeinfo;
-	time_t timestamp = FileTime2Unixepoch(aDate);
-
-#ifdef Q_OS_WIN
     if(!localtime)
-        gmtime_s(&timeinfo,&timestamp);
-    else
-        localtime_s(&timeinfo,&timestamp);
+        timestamp.setTimeSpec(Qt::UTC);
+    timestamp.setSecsSinceEpoch(FileTime2Unixepoch(aDate)); // Will be in local time (the timezone of the system)
 
-    strftime(timewithoutendl, "%F %T", &timeinfo);
-#else
-    if(!localtime)
-        gmtime_r(&timestamp, &timeinfo);
-    else
-       localtime_r(&timestamp, &timeinfo);
-
-    // timewithoutendl = asctime(&timeinfo);
-    sprintf(timewithoutendl, "%d-%.2d-%.2d %.2d:%.2d:%.2d\n",
-            timeinfo.tm_year +1900,
-            timeinfo.tm_mon,
-            timeinfo.tm_mday,
-            timeinfo.tm_hour,
-            timeinfo.tm_min,
-            timeinfo.tm_sec);
-#endif
-
-
-
-
-
-	if (timewithoutendl != NULL){
-        len = (qint32)strlen(timewithoutendl);
-		timewithoutendl[len - 1] = 0;
-	}
-	return timewithoutendl;
+    return timestamp.toString("yyyy.MM.dd hh:mm:ss t");
 
 }
+
+
 
 quint64 MainWindow::FileTime2Unixepoch(const quint64 ft)
 
