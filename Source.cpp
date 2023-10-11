@@ -224,6 +224,7 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
     static OBJECT_IDENTIFIER_ATTRIBUTE_CONTENT oiaContent;
 
     quint64 pos = 0;
+    quint16 sequenceNumber = 0;
 
     if( ui->chkUTC->isChecked() ){
         wantlocaltime = false;
@@ -234,6 +235,9 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 
 	//rewind(mftfp);
     pos = get48bits(&objEntry->MFTRecord) * 0x400; // Make sure we start on the correct MFT Record
+
+    sequenceNumber = (objEntry->MFTRecord & 0xFFFF000000000000) >> 48;
+
 
 	char recBuffer[0x400]; // Normal size of a MFT Record
     for (qint32 i = 0; i < 0x400; i++)
@@ -246,8 +250,14 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
 	// copy the info from the memory buffer to the structure mftHeader
 	memcpy(mftHeader, &recBuffer[0], sizeof(MFT_RECORD_HEADER));
 
+    if(mftHeader->SequenceCount != sequenceNumber){
+      return; // No point in parsing MFT record, the mapping is not reliable
+    }
+
 	// Yes, also the MFT records have this Update Sequence Numbers
 	fixUpUSN(&recBuffer[0], mftHeader, 0, 512);
+
+
 
 	printMFTHeader(mftHeader);
 
@@ -275,7 +285,7 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
     fieldSIAList.append(mftPosition);
 
 
-    QStandardItem *siaAttrib = new QStandardItem("SIA");
+    QStandardItem *siaAttrib = new QStandardItem("Standard Information Attribute");
     fieldSIAList.append(siaAttrib);
 
     QString allocationStatus;
@@ -378,7 +388,7 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
             QStandardItem *mftFNAPosition = new QStandardItem("MFT offset = " + QString::number(pos) + "+"  + QString::number(mftpos));
             fieldList.append(mftFNAPosition);
 
-            QStandardItem *fnaAttrib = new QStandardItem("FNA");
+            QStandardItem *fnaAttrib = new QStandardItem("File Name Attribute");
             fieldList.append(fnaAttrib);
 
             QStandardItem *mftFNAFlags = new QStandardItem(allocationStatus);
@@ -434,7 +444,7 @@ void MainWindow::printMftRecord(const INDX_ENTRY * objEntry, QByteArray MFTData,
             QStandardItem *mftOIAPosition = new QStandardItem("MFT offset = " + QString::number(pos) + "+"  + QString::number(mftpos));
             fieldOIAList.append(mftOIAPosition);
 
-            QStandardItem *oiaAttrib = new QStandardItem("OIA");
+            QStandardItem *oiaAttrib = new QStandardItem("Object Index Attribute");
             fieldOIAList.append(oiaAttrib);
 
 
@@ -547,7 +557,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *objPosition = new QStandardItem("ObjectID$O offset = " + QString::number(pos + (page * 0x1000) ) + " + 16");
     fieldObjList.append(objPosition);
 
-    QStandardItem *Attrib = new QStandardItem("ObjectID");
+    QStandardItem *Attrib = new QStandardItem("Object ID");
     fieldObjList.append(Attrib);
 
     QStandardItem *objFlags = new QStandardItem(getObjFlags(entry->Flags));
@@ -618,7 +628,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *objVolPosition = new QStandardItem("ObjectID$O offset = " + QString::number(pos+ (page * 0x1000) ) + " + 40");
     fieldObjVolList.append(objVolPosition);
 
-    QStandardItem *VolAttrib = new QStandardItem("BirthVolumeID");
+    QStandardItem *VolAttrib = new QStandardItem("Birth Volume Object ID");
     fieldObjVolList.append(VolAttrib);
 
     QStandardItem *objVolFlags = new QStandardItem(getObjFlags(entry->Flags));
@@ -693,7 +703,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *objBirthPosition = new QStandardItem("ObjectID$O offset = " + QString::number(pos + (page * 0x1000) )  + " + 56");
     fieldObjBirthList.append(objBirthPosition);
 
-    QStandardItem *BirthAttrib = new QStandardItem("BirthObjectID");
+    QStandardItem *BirthAttrib = new QStandardItem("Birth Object ID");
     fieldObjBirthList.append(BirthAttrib);
 
     QStandardItem *objBirthFlags = new QStandardItem(getObjFlags(entry->Flags));
@@ -748,7 +758,7 @@ void MainWindow::printIndxEntry(const INDX_ENTRY * entry, quint64 pos, quint32 p
     QStandardItem *objDomainPosition = new QStandardItem("ObjectID$O offset = " + QString::number(pos + (page * 0x1000) ) + " + 72");
     fieldObjDomainList.append(objDomainPosition);
 
-    QStandardItem *DomainAttrib = new QStandardItem("DomainObjectID");
+    QStandardItem *DomainAttrib = new QStandardItem("Domain Object ID");
     fieldObjDomainList.append(DomainAttrib);
 
     QStandardItem *objDomainFlags = new QStandardItem(getObjFlags(entry->Flags));
