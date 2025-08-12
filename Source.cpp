@@ -987,9 +987,8 @@ QString MainWindow::printObjIDMac(const char * buffer)
     QString macaddr, tempHex;
 	// Buffer is 16 bytes
     // printf("\nMAC address: ");
-    if(buffer[10] & (1 << 0)){ // Is bit 0 set in octet 10?
-        return "Not valid MAC!";
-    }
+    tempHex = "";
+
     for(qint32 i = 10; i < 16; i++)
 	{
 
@@ -1008,6 +1007,12 @@ QString MainWindow::printObjIDMac(const char * buffer)
             // printf("-");
         } // if
 	} // for
+    if(buffer[10] & (1 << 0)){ // Is bit 0 set in octet 10?
+        macaddr += " Not valid MAC!";
+    }
+    if(buffer[10] & (1 << 1)){ // Is bit 1 set in octet 10?
+        macaddr += " Locally assigned MAC (Not unique?)";
+    }
     return macaddr;
 }
 
